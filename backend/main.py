@@ -545,4 +545,9 @@ def startup():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Bind explicitly to 127.0.0.1 (IPv4 loopback) so:
+    #   1. The app is reachable ONLY from this machine (loopback-only lab promise).
+    #   2. Burp Suite's proxy can resolve "localhost" → 127.0.0.1 without
+    #      hitting the Node 17+ IPv6-first quirk that makes Vite/uvicorn
+    #      invisible to dual-stack proxy tools.
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

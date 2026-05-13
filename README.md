@@ -32,8 +32,8 @@ pip install -r requirements.txt
 
 # Run server (auto-creates shop.db with seed data)
 python main.py
-# → API running at http://localhost:8000
-# → Docs at http://localhost:8000/docs
+# → API running at http://127.0.0.1:8000   (IPv4 loopback only — required for Burp)
+# → Docs at        http://127.0.0.1:8000/docs
 ```
 
 ### 2. Frontend
@@ -43,10 +43,10 @@ cd vulnshop/frontend
 
 npm install
 npm run dev
-# → App running at http://localhost:3000
+# → App running at http://127.0.0.1:3000   (IPv4 loopback only)
 ```
 
-### 3. Open `http://localhost:3000`
+### 3. Open `http://127.0.0.1:3000`
 
 ---
 
@@ -128,6 +128,33 @@ vulnshop/
 │   └── package.json
 ├── VULNERABILITIES.md       ← Full pentest guide with PoC
 └── README.md
+```
+
+---
+
+## Troubleshooting
+
+### Burp's browser shows the Apache "It works!" page on `localhost:3000`
+
+Something other than Burp Suite is bound to port 8080. Run `lsof -i :8080`; if you see `httpd`, stop it:
+
+```bash
+brew services stop httpd          # if installed via Homebrew
+# or
+sudo apachectl stop
+```
+
+Then restart Burp so its proxy listener takes port 8080 cleanly.
+
+### Burp's browser shows "Failed to connect to localhost:3000"
+
+Vite or uvicorn isn't running, **or** it bound to IPv6 only and Burp can't reach it via IPv4. The repo now pins both servers to `127.0.0.1` in `frontend/vite.config.js` and `backend/main.py` to avoid the Node 17+ IPv6-first quirk — if you've edited those files, restore the `host="127.0.0.1"` settings.
+
+Verify with:
+
+```bash
+lsof -i :3000     # expect node IPv4 LISTEN
+lsof -i :8000     # expect python/uvicorn IPv4 LISTEN
 ```
 
 ---
