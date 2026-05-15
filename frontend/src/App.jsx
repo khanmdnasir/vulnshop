@@ -104,6 +104,9 @@ export default function App() {
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, cart, addToCart, removeFromCart, clearCart }}>
       <BrowserRouter>
+        <div style={styles.labBanner}>
+          ⚠️  TRAINING LAB — VulnShop is deliberately vulnerable. Do not enter real passwords. All data is reset on every deploy.
+        </div>
         <Navbar />
         <div style={styles.main}>
           <Routes>
@@ -122,6 +125,15 @@ export default function App() {
 }
 
 const styles = {
+  labBanner: {
+    background: '#7c2d12',
+    color: '#fed7aa',
+    fontSize: '13px',
+    fontWeight: 600,
+    textAlign: 'center',
+    padding: '8px 16px',
+    borderBottom: '1px solid #9a3412',
+  },
   nav: {
     display: 'flex',
     alignItems: 'center',

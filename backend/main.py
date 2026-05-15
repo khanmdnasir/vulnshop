@@ -15,6 +15,7 @@ Vulnerabilities present (OWASP Top 10 **2025**):
   [A10:2025] Mishandling of Exceptional Conditions — raw stack traces returned to client in 500s
 """
 
+import os
 import sqlite3
 import traceback
 from datetime import datetime, timedelta
@@ -36,20 +37,28 @@ app = FastAPI(
     version="1.0.0-dev",
 )
 
-# [A02:2025] CORS wildcard + credentials — any origin can make credentialed requests
+# [A02:2025] CORS wildcard + credentials — any origin can make credentialed requests.
+# For Railway/Vercel deploys you can pin this down via CORS_ORIGINS="https://your-vercel-app.vercel.app"
+# (comma-separated). The lab default stays "*" to keep the misconfiguration finding in play.
+_cors = os.environ.get("CORS_ORIGINS", "*")
+_origins = [o.strip() for o in _cors.split(",")] if _cors != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# [A04:2025] Weak, hard-coded JWT secret — trivially brute-forceable with hashcat/rockyou
-SECRET_KEY = "secret"
+# [A04:2025] Weak, hard-coded JWT secret — trivially brute-forceable with hashcat/rockyou.
+# Overridable via JWT_SECRET for ops convenience, but defaults to the deliberately weak "secret"
+# so the A04 exploit remains demonstrable out of the box.
+SECRET_KEY = os.environ.get("JWT_SECRET", "secret")
 ALGORITHM = "HS256"
 
-DB_PATH = "shop.db"
+# Railway gives you ephemeral disk by default; SQLite still works but the DB resets on every
+# deploy/redeploy. That's fine for the lab — startup re-seeds the same 10 users + 30 orders.
+DB_PATH = os.environ.get("DB_PATH", "shop.db")
 
 # ---------------------------------------------------------------------------
 # Database
@@ -545,9 +554,12 @@ def startup():
 
 if __name__ == "__main__":
     import uvicorn
-    # Bind explicitly to 127.0.0.1 (IPv4 loopback) so:
+    # Local default: bind to 127.0.0.1 so:
     #   1. The app is reachable ONLY from this machine (loopback-only lab promise).
-    #   2. Burp Suite's proxy can resolve "localhost" → 127.0.0.1 without
-    #      hitting the Node 17+ IPv6-first quirk that makes Vite/uvicorn
-    #      invisible to dual-stack proxy tools.
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    #   2. Burp Suite's proxy can resolve "localhost" → 127.0.0.1 without hitting
+    #      the Node 17+ IPv6-first quirk that makes Vite/uvicorn invisible to
+    #      dual-stack proxy tools.
+    # Cloud deploys (Railway/Render/Fly) override via HOST=0.0.0.0 and PORT=<assigned>.
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run("main:app", host=host, port=port, reload=(host == "127.0.0.1"))
